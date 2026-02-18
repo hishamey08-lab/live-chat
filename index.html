@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="font-family: Arial;">
+
+  <h2>Live Friend Chat 💬</h2>
+
+  <input id="name" placeholder="Your name"><br><br>
+  <input id="text" placeholder="Type message">
+  <button onclick="sendMessage()">Send</button>
+
+  <ul id="chat"></ul>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      onSnapshot,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {}; // WE ADD THIS LATER
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const chat = document.getElementById("chat");
+    const q = query(collection(db, "messages"), orderBy("time"));
+
+    onSnapshot(q, (snapshot) => {
+      chat.innerHTML = "";
+      snapshot.forEach(doc => {
+        const li = document.createElement("li");
+        li.textContent = doc.data().name + ": " + doc.data().text;
+        chat.appendChild(li);
+      });
+    });
+
+    window.sendMessage = async () => {
+      const name = document.getElementById("name").value;
+      const text = document.getElementById("text").value;
+      if (!name || !text) return;
+
+      await addDoc(collection(db, "messages"), {
+        name,
+        text,
+        time: Date.now()
+      });
+
+      document.getElementById("text").value = "";
+    };
+  </script>
+
+</body>
+</html>
