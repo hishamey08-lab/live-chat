@@ -1,60 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Chat</title>
+  <title>Live Chat 💬</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    #chatBox {
+      background: white;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    input {
+      padding: 10px;
+      width: 70%;
+    }
+    button {
+      padding: 10px;
+    }
+    p {
+      margin: 5px 0;
+    }
+  </style>
 </head>
-<body style="font-family: Arial;">
 
-  <h2>Live Friend Chat 💬</h2>
+<body>
 
-  <input id="name" placeholder="Your name"><br><br>
-  <input id="text" placeholder="Type message">
+  <h2>🔥 Live Chat</h2>
+
+  <div id="chatBox"></div>
+
+  <input id="messageInput" placeholder="Type a message..." />
   <button onclick="sendMessage()">Send</button>
 
-  <ul id="chat"></ul>
-
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore,
       collection,
       addDoc,
       onSnapshot,
-      query,
-      orderBy
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {}; // WE ADD THIS LATER
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbff0h2wksb_RnNfvQNvN-3JpERiRdLVg",
+      authDomain: "live-chat-9016a.firebaseapp.com",
+      projectId: "live-chat-9016a",
+      storageBucket: "live-chat-9016a.appspot.com",
+      messagingSenderId: "687453441605",
+      appId: "1:687453441605:web:0f0a5b9b61afc6a408dd2c"
+    };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const chat = document.getElementById("chat");
-    const q = query(collection(db, "messages"), orderBy("time"));
+    const chatBox = document.getElementById("chatBox");
+    const messageInput = document.getElementById("messageInput");
 
-    onSnapshot(q, (snapshot) => {
-      chat.innerHTML = "";
-      snapshot.forEach(doc => {
-        const li = document.createElement("li");
-        li.textContent = doc.data().name + ": " + doc.data().text;
-        chat.appendChild(li);
-      });
-    });
-
+    // Send message
     window.sendMessage = async () => {
-      const name = document.getElementById("name").value;
-      const text = document.getElementById("text").value;
-      if (!name || !text) return;
+      if (messageInput.value.trim() === "") return;
 
       await addDoc(collection(db, "messages"), {
-        name,
-        text,
-        time: Date.now()
+        text: messageInput.value,
+        time: serverTimestamp()
       });
 
-      document.getElementById("text").value = "";
+      messageInput.value = "";
     };
+
+    // Receive messages in real-time
+    onSnapshot(collection(db, "messages"), (snapshot) => {
+      chatBox.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const p = document.createElement("p");
+        p.textContent = doc.data().text;
+        chatBox.appendChild(p);
+      });
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
   </script>
 
 </body>
