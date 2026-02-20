@@ -1,100 +1,238 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Chat</title>
+  <title>Secret Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      padding: 20px;
+      background: #000;
     }
+
+    /* 🔐 Lock Screen */
+    #lockScreen {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: black;
+      color: white;
+    }
+
+    .photos {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      width: 80%;
+      max-width: 400px;
+      margin-bottom: 20px;
+    }
+
+    .photos img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    #passwordInput {
+      padding: 12px;
+      width: 200px;
+      border-radius: 6px;
+      border: none;
+      text-align: center;
+    }
+
+    #enterBtn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #25D366;
+      color: white;
+      font-size: 16px;
+    }
+
+    /* 💬 Chat Page */
+    #chatPage {
+      display: none;
+      height: 100vh;
+      background: #ece5dd;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chatHeader {
+      background: #075E54;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+
     #chatBox {
-      background: white;
+      flex: 1;
       padding: 10px;
-      height: 300px;
       overflow-y: auto;
+    }
+
+    .msg {
+      max-width: 70%;
+      padding: 8px 12px;
+      margin-bottom: 6px;
       border-radius: 8px;
-      margin-bottom: 10px;
+      font-size: 14px;
+      word-wrap: break-word;
     }
-    input {
+
+    .me {
+      background: #dcf8c6;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .friend {
+      background: #cfe9ff;
+      margin-right: auto;
+      text-align: left;
+    }
+
+    #inputArea {
+      display: flex;
       padding: 10px;
-      width: 70%;
+      background: #f0f0f0;
     }
-    button {
+
+    #messageInput {
+      flex: 1;
       padding: 10px;
+      border-radius: 20px;
+      border: none;
+      outline: none;
     }
-    p {
-      margin: 5px 0;
+
+    #sendBtn {
+      background: #25D366;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      margin-left: 8px;
+      border-radius: 50%;
+      font-size: 16px;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>🔥 Live Chat</h2>
+<!-- 🔐 PASSWORD PAGE -->
+<div id="lockScreen">
+  <div class="photos">
+    <img src="https://picsum.photos/200?1">
+    <img src="https://picsum.photos/200?2">
+    <img src="https://picsum.photos/200?3">
+    <img src="https://picsum.photos/200?4">
+  </div>
+  <input id="passwordInput" type="password" placeholder="Enter Password">
+  <button id="enterBtn" onclick="checkPassword()">Enter</button>
+</div>
 
+<!-- 💬 CHAT PAGE -->
+<div id="chatPage">
+  <div id="chatHeader">🔒 Secret Chat</div>
   <div id="chatBox"></div>
 
-  <input id="messageInput" placeholder="Type a message..." />
-  <button onclick="sendMessage()">Send</button>
+  <div id="inputArea">
+    <input id="messageInput" placeholder="Type a message...">
+    <button id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
 
-  <script type="module">
-    // Import Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      onSnapshot,
-      query,
-      orderBy,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module">
+  /* 🔐 PASSWORD */
+  const SECRET_PASSWORD = "1234";
 
-    // Firebase config (YOURS)
-    const firebaseConfig = {
-      apiKey: "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",
-      authDomain: "live-chat-9016a.firebaseapp.com",
-      projectId: "live-chat-9016a",
-      storageBucket: "live-chat-9016a.appspot.com",
-      messagingSenderId: "687453441605",
-      appId: "1:687453441605:web:0f0a5b9b61afca40dd2c"
-    };
+  let myId = localStorage.getItem("myId");
+  if (!myId) {
+    myId = Math.random().toString(36).substring(2);
+    localStorage.setItem("myId", myId);
+  }
 
-    // Init Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  window.checkPassword = () => {
+    if (passwordInput.value === SECRET_PASSWORD) {
+      lockScreen.style.display = "none";
+      chatPage.style.display = "flex";
+    } else {
+      alert("Wrong password ❌");
+    }
+  };
 
-    const chatBox = document.getElementById("chatBox");
-    const messageInput = document.getElementById("messageInput");
+  /* 🔥 Firebase */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    query,
+    orderBy,
+    serverTimestamp,
+    deleteDoc,
+    doc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 🔴 LIVE LISTENER (shows messages)
-    const q = query(collection(db, "messages"), orderBy("time"));
+  const firebaseConfig = {
+    apiKey: "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",
+    authDomain: "live-chat-9016a.firebaseapp.com",
+    projectId: "live-chat-9016a",
+    storageBucket: "live-chat-9016a.appspot.com",
+    messagingSenderId: "687453441605",
+    appId: "1:687453441605:web:0f0a5b9b61afca40dd2c"
+  };
 
-    onSnapshot(q, (snapshot) => {
-      chatBox.innerHTML = "";
-      snapshot.forEach(doc => {
-        const p = document.createElement("p");
-        p.textContent = doc.data().text;
-        chatBox.appendChild(p);
-      });
-      chatBox.scrollTop = chatBox.scrollHeight;
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const q = query(collection(db, "messages"), orderBy("time"));
+
+  onSnapshot(q, (snapshot) => {
+    chatBox.innerHTML = "";
+    snapshot.forEach(d => {
+      const data = d.data();
+      const div = document.createElement("div");
+      const isMe = data.sender === myId;
+
+      div.className = "msg " + (isMe ? "me" : "friend");
+      div.textContent = data.text;
+
+      if (isMe) {
+        div.ondblclick = async () => {
+          if (confirm("Delete this message?")) {
+            await deleteDoc(doc(db, "messages", d.id));
+          }
+        };
+      }
+
+      chatBox.appendChild(div);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+
+  window.sendMessage = async () => {
+    if (messageInput.value.trim() === "") return;
+
+    await addDoc(collection(db, "messages"), {
+      text: messageInput.value,
+      sender: myId,
+      time: serverTimestamp()
     });
 
-    // 🟢 SEND MESSAGE (FIXED NAME)
-    window.sendMessage = async () => {
-      if (messageInput.value.trim() === "") return;
-
-      await addDoc(collection(db, "messages"), {
-        text: messageInput.value,
-        time: serverTimestamp()
-      });
-
-      messageInput.value = "";
-    };
-  </script>
+    messageInput.value = "";
+  };
+</script>
 
 </body>
-</html>
+  </html>
