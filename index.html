@@ -9,6 +9,7 @@
       margin: 0;
       font-family: Arial, sans-serif;
       background: #000;
+      overflow: hidden;
     }
 
     /* 🔐 Lock Screen */
@@ -81,11 +82,12 @@
 
     .msg {
       max-width: 70%;
-      padding: 8px 12px;
+      padding: 8px 12px 18px;
       margin-bottom: 6px;
       border-radius: 8px;
       font-size: 14px;
       word-wrap: break-word;
+      position: relative;
     }
 
     .me {
@@ -98,6 +100,19 @@
       background: #cfe9ff;
       margin-right: auto;
       text-align: left;
+    }
+
+    /* 💗 Pink ticks */
+    .tick {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 11px;
+      color: #f48fb1;
+    }
+
+    .seen {
+      color: #e91e63;
     }
 
     #inputArea {
@@ -131,11 +146,12 @@
 <!-- 🔐 PASSWORD PAGE -->
 <div id="lockScreen">
   <div class="photos">
-    <img src="https://picsum.photos/200?1">
-    <img src="https://picsum.photos/200?2">
-    <img src="https://picsum.photos/200?3">
-    <img src="https://picsum.photos/200?4">
+    <img src="photo1.png">
+    <img src="photo2.png">
+    <img src="photo3.png">
+    <img src="photo4.png">
   </div>
+
   <input id="passwordInput" type="password" placeholder="Enter Password">
   <button id="enterBtn" onclick="checkPassword()">Enter</button>
 </div>
@@ -152,7 +168,6 @@
 </div>
 
 <script type="module">
-  /* 🔐 PASSWORD */
   const SECRET_PASSWORD = "1234";
 
   let myId = localStorage.getItem("myId");
@@ -165,12 +180,13 @@
     if (passwordInput.value === SECRET_PASSWORD) {
       lockScreen.style.display = "none";
       chatPage.style.display = "flex";
+      document.body.style.overflow = "auto";
+      markMessagesSeen();
     } else {
       alert("Wrong password ❌");
     }
   };
 
-  /* 🔥 Firebase */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
     getFirestore,
@@ -181,7 +197,8 @@
     orderBy,
     serverTimestamp,
     deleteDoc,
-    doc
+    doc,
+    updateDoc
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -198,17 +215,33 @@
 
   const q = query(collection(db, "messages"), orderBy("time"));
 
-  onSnapshot(q, (snapshot) => {
+  function markMessagesSeen() {
+    onSnapshot(q, snapshot => {
+      snapshot.forEach(async d => {
+        const data = d.data();
+        if (data.sender !== myId && !data.seen) {
+          await updateDoc(doc(db, "messages", d.id), { seen: true });
+        }
+      });
+    });
+  }
+
+  onSnapshot(q, snapshot => {
     chatBox.innerHTML = "";
     snapshot.forEach(d => {
       const data = d.data();
-      const div = document.createElement("div");
       const isMe = data.sender === myId;
 
+      const div = document.createElement("div");
       div.className = "msg " + (isMe ? "me" : "friend");
       div.textContent = data.text;
 
       if (isMe) {
+        const tick = document.createElement("span");
+        tick.className = "tick " + (data.seen ? "seen" : "");
+        tick.textContent = data.seen ? "✔✔" : "✔";
+        div.appendChild(tick);
+
         div.ondblclick = async () => {
           if (confirm("Delete this message?")) {
             await deleteDoc(doc(db, "messages", d.id));
@@ -218,6 +251,7 @@
 
       chatBox.appendChild(div);
     });
+
     chatBox.scrollTop = chatBox.scrollHeight;
   });
 
@@ -227,7 +261,8 @@
     await addDoc(collection(db, "messages"), {
       text: messageInput.value,
       sender: myId,
-      time: serverTimestamp()
+      time: serverTimestamp(),
+      seen: false
     });
 
     messageInput.value = "";
