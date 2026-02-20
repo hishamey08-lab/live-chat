@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Chat 💬</title>
+  <title>Live Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -40,34 +41,49 @@
   <button onclick="sendMessage()">Send</button>
 
   <script type="module">
-    // Import Firebase SDKs
+    // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore,
       collection,
       addDoc,
       onSnapshot,
+      query,
+      orderBy,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Firebase configuration
+    // Firebase config (YOURS)
     const firebaseConfig = {
-      apiKey: "AIzaSyCbff0h2wksb_RnNfvQNvN-3JpERiRdLVg",
+      apiKey: "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",
       authDomain: "live-chat-9016a.firebaseapp.com",
       projectId: "live-chat-9016a",
       storageBucket: "live-chat-9016a.appspot.com",
       messagingSenderId: "687453441605",
-      appId: "1:687453441605:web:0f0a5b9b61afc6a408dd2c"
+      appId: "1:687453441605:web:0f0a5b9b61afca40dd2c"
     };
 
-    // Initialize Firebase
+    // Init Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const chatBox = document.getElementById("chatBox");
     const messageInput = document.getElementById("messageInput");
 
-    // Send message
+    // 🔴 LIVE LISTENER (shows messages)
+    const q = query(collection(db, "messages"), orderBy("time"));
+
+    onSnapshot(q, (snapshot) => {
+      chatBox.innerHTML = "";
+      snapshot.forEach(doc => {
+        const p = document.createElement("p");
+        p.textContent = doc.data().text;
+        chatBox.appendChild(p);
+      });
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    // 🟢 SEND MESSAGE (FIXED NAME)
     window.sendMessage = async () => {
       if (messageInput.value.trim() === "") return;
 
@@ -78,17 +94,6 @@
 
       messageInput.value = "";
     };
-
-    // Receive messages in real-time
-    onSnapshot(collection(db, "messages"), (snapshot) => {
-      chatBox.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const p = document.createElement("p");
-        p.textContent = doc.data().text;
-        chatBox.appendChild(p);
-      });
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
   </script>
 
 </body>
