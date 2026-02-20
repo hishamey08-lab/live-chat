@@ -29,7 +29,6 @@
       gap: 10px;
       width: 80%;
       max-width: 400px;
-      margin-bottom: 20px;
     }
 
     .photos img {
@@ -39,12 +38,31 @@
       border-radius: 10px;
     }
 
+    /* 🔘 Unlock button */
+    #showPassBtn {
+      margin-top: 20px;
+      padding: 12px 28px;
+      border-radius: 25px;
+      border: none;
+      background: #25D366;
+      color: white;
+      font-size: 16px;
+    }
+
+    /* 🔐 Password area */
+    #passwordArea {
+      display: none;
+      margin-top: 15px;
+      text-align: center;
+    }
+
     #passwordInput {
       padding: 12px;
       width: 200px;
       border-radius: 6px;
       border: none;
       text-align: center;
+      font-size: 16px;
     }
 
     #enterBtn {
@@ -52,7 +70,7 @@
       padding: 10px 20px;
       border: none;
       border-radius: 6px;
-      background: #25D366;
+      background: #075E54;
       color: white;
       font-size: 16px;
     }
@@ -62,7 +80,6 @@
       display: none;
       height: 100vh;
       background: #ece5dd;
-      display: flex;
       flex-direction: column;
     }
 
@@ -143,7 +160,7 @@
 
 <body>
 
-<!-- 🔐 PASSWORD PAGE -->
+<!-- 🔐 FIRST PAGE -->
 <div id="lockScreen">
   <div class="photos">
     <img src="photo1.png">
@@ -152,8 +169,13 @@
     <img src="photo4.png">
   </div>
 
-  <input id="passwordInput" type="password" placeholder="Enter Password">
-  <button id="enterBtn" onclick="checkPassword()">Enter</button>
+  <button id="showPassBtn" onclick="showPasswordBox()">🔒 Unlock</button>
+
+  <div id="passwordArea">
+    <input id="passwordInput" type="password" placeholder="Enter Password">
+    <br>
+    <button id="enterBtn" onclick="checkPassword()">Enter</button>
+  </div>
 </div>
 
 <!-- 💬 CHAT PAGE -->
@@ -168,13 +190,21 @@
 </div>
 
 <script type="module">
-  const SECRET_PASSWORD = "1234";
+  /* 🔐 PASSWORD */
+  const SECRET_PASSWORD = "9647";
 
+  /* 👤 user id */
   let myId = localStorage.getItem("myId");
   if (!myId) {
     myId = Math.random().toString(36).substring(2);
     localStorage.setItem("myId", myId);
   }
+
+  window.showPasswordBox = () => {
+    passwordArea.style.display = "block";
+    showPassBtn.style.display = "none";
+    passwordInput.focus();
+  };
 
   window.checkPassword = () => {
     if (passwordInput.value === SECRET_PASSWORD) {
@@ -270,4 +300,4 @@
 </script>
 
 </body>
-  </html>
+      </html>
