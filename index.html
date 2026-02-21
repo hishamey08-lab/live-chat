@@ -38,7 +38,6 @@
       border-radius: 10px;
     }
 
-    /* 🔘 Unlock button */
     #showPassBtn {
       margin-top: 20px;
       padding: 12px 28px;
@@ -49,7 +48,6 @@
       font-size: 16px;
     }
 
-    /* 🔐 Password area */
     #passwordArea {
       display: none;
       margin-top: 15px;
@@ -75,7 +73,7 @@
       font-size: 16px;
     }
 
-    /* 💬 Chat Page */
+    /* 💬 Chat */
     #chatPage {
       display: none;
       height: 100vh;
@@ -103,23 +101,19 @@
       margin-bottom: 6px;
       border-radius: 8px;
       font-size: 14px;
-      word-wrap: break-word;
       position: relative;
     }
 
     .me {
       background: #dcf8c6;
       margin-left: auto;
-      text-align: right;
     }
 
     .friend {
       background: #cfe9ff;
       margin-right: auto;
-      text-align: left;
     }
 
-    /* 💗 Pink ticks */
     .tick {
       position: absolute;
       bottom: 4px;
@@ -134,7 +128,8 @@
 
     #inputArea {
       display: flex;
-      padding: 10px;
+      align-items: center;
+      padding: 8px;
       background: #f0f0f0;
     }
 
@@ -146,14 +141,38 @@
       outline: none;
     }
 
-    #sendBtn {
+    #sendBtn, #micBtn {
       background: #25D366;
       border: none;
       color: white;
-      padding: 10px 15px;
-      margin-left: 8px;
+      padding: 10px;
+      margin-left: 5px;
       border-radius: 50%;
       font-size: 16px;
+    }
+
+    /* 🎵 Waveform */
+    #waveform {
+      display: none;
+      gap: 3px;
+      margin-right: 6px;
+    }
+
+    #waveform span {
+      width: 4px;
+      height: 10px;
+      background: #25D366;
+      animation: wave 1s infinite ease-in-out;
+    }
+
+    #waveform span:nth-child(2){animation-delay:.1s}
+    #waveform span:nth-child(3){animation-delay:.2s}
+    #waveform span:nth-child(4){animation-delay:.3s}
+    #waveform span:nth-child(5){animation-delay:.4s}
+
+    @keyframes wave {
+      0%,100% {height: 6px}
+      50% {height: 18px}
     }
   </style>
 </head>
@@ -172,7 +191,7 @@
   <button id="showPassBtn" onclick="showPasswordBox()">🔒 Unlock</button>
 
   <div id="passwordArea">
-    <input id="passwordInput" type="password" placeholder="Enter Password">
+    <input id="passwordInput" type="password">
     <br>
     <button id="enterBtn" onclick="checkPassword()">Enter</button>
   </div>
@@ -184,26 +203,24 @@
   <div id="chatBox"></div>
 
   <div id="inputArea">
-    <input id="messageInput" placeholder="Type a message...">
+    <div id="waveform">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <input id="messageInput" placeholder="Message">
+    <button id="micBtn">🎤</button>
     <button id="sendBtn" onclick="sendMessage()">➤</button>
   </div>
 </div>
 
 <script type="module">
-  /* 🔐 PASSWORD */
-  const SECRET_PASSWORD = "9677";
+  const SECRET_PASSWORD = "9647";
 
-  /* 👤 user id */
-  let myId = localStorage.getItem("myId");
-  if (!myId) {
-    myId = Math.random().toString(36).substring(2);
-    localStorage.setItem("myId", myId);
-  }
+  let myId = localStorage.getItem("myId") || Math.random().toString(36).slice(2);
+  localStorage.setItem("myId", myId);
 
   window.showPasswordBox = () => {
     passwordArea.style.display = "block";
     showPassBtn.style.display = "none";
-    passwordInput.focus();
   };
 
   window.checkPassword = () => {
@@ -211,93 +228,120 @@
       lockScreen.style.display = "none";
       chatPage.style.display = "flex";
       document.body.style.overflow = "auto";
-      markMessagesSeen();
-    } else {
-      alert("Wrong password ❌");
-    }
+    } else alert("Wrong password");
   };
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import {
-    getFirestore,
-    collection,
-    addDoc,
-    onSnapshot,
-    query,
-    orderBy,
-    serverTimestamp,
-    deleteDoc,
-    doc,
-    updateDoc
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc, updateDoc } 
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } 
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-  const firebaseConfig = {
+  const app = initializeApp({
     apiKey: "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",
     authDomain: "live-chat-9016a.firebaseapp.com",
     projectId: "live-chat-9016a",
     storageBucket: "live-chat-9016a.appspot.com",
     messagingSenderId: "687453441605",
     appId: "1:687453441605:web:0f0a5b9b61afca40dd2c"
-  };
+  });
 
-  const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-
+  const storage = getStorage(app);
   const q = query(collection(db, "messages"), orderBy("time"));
 
-  function markMessagesSeen() {
-    onSnapshot(q, snapshot => {
-      snapshot.forEach(async d => {
-        const data = d.data();
-        if (data.sender !== myId && !data.seen) {
-          await updateDoc(doc(db, "messages", d.id), { seen: true });
-        }
-      });
-    });
-  }
+  let mediaRecorder, audioChunks = [];
+  let startX = 0, cancelled = false;
 
-  onSnapshot(q, snapshot => {
+  micBtn.addEventListener("click", async () => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      cancelled = false;
+      waveform.style.display = "flex";
+      micBtn.textContent = "⏹️";
+
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+      mediaRecorder.onstop = async () => {
+        waveform.style.display = "none";
+        micBtn.textContent = "🎤";
+        if (cancelled) return;
+
+        const blob = new Blob(audioChunks, { type: "audio/webm" });
+        const audioRef = ref(storage, `voices/${Date.now()}.webm`);
+        await uploadBytes(audioRef, blob);
+        const url = await getDownloadURL(audioRef);
+
+        await addDoc(collection(db, "messages"), {
+          audio: url,
+          sender: myId,
+          time: serverTimestamp(),
+          seen: false,
+          deletedForEveryone: false
+        });
+      };
+
+      mediaRecorder.start();
+    } else {
+      mediaRecorder.stop();
+    }
+  });
+
+  micBtn.addEventListener("touchstart", e => startX = e.touches[0].clientX);
+  micBtn.addEventListener("touchmove", e => {
+    if (startX - e.touches[0].clientX > 80) {
+      cancelled = true;
+      mediaRecorder.stop();
+    }
+  });
+
+  onSnapshot(q, snap => {
     chatBox.innerHTML = "";
-    snapshot.forEach(d => {
+    snap.forEach(d => {
       const data = d.data();
-      const isMe = data.sender === myId;
-
       const div = document.createElement("div");
-      div.className = "msg " + (isMe ? "me" : "friend");
-      div.textContent = data.text;
+      div.className = "msg " + (data.sender === myId ? "me" : "friend");
 
-      if (isMe) {
-        const tick = document.createElement("span");
-        tick.className = "tick " + (data.seen ? "seen" : "");
-        tick.textContent = data.seen ? "✔✔" : "✔";
-        div.appendChild(tick);
+      if (data.deletedForEveryone) {
+        div.textContent = "🚫 This message was deleted";
+        div.style.fontStyle = "italic";
+      } else if (data.audio) {
+        const a = document.createElement("audio");
+        a.controls = true;
+        a.src = data.audio;
+        div.appendChild(a);
+      } else {
+        div.textContent = data.text;
+      }
 
-        div.ondblclick = async () => {
-          if (confirm("Delete this message?")) {
-            await deleteDoc(doc(db, "messages", d.id));
-          }
-        };
+      if (data.sender === myId) {
+        const t = document.createElement("span");
+        t.className = "tick " + (data.seen ? "seen" : "");
+        t.textContent = data.seen ? "✔✔" : "✔";
+        div.appendChild(t);
+
+        div.ondblclick = () => updateDoc(doc(db, "messages", d.id), { deletedForEveryone: true });
       }
 
       chatBox.appendChild(div);
     });
-
     chatBox.scrollTop = chatBox.scrollHeight;
   });
 
   window.sendMessage = async () => {
-    if (messageInput.value.trim() === "") return;
-
+    if (!messageInput.value.trim()) return;
     await addDoc(collection(db, "messages"), {
       text: messageInput.value,
       sender: myId,
       time: serverTimestamp(),
-      seen: false
+      seen: false,
+      deletedForEveryone: false
     });
-
     messageInput.value = "";
   };
 </script>
 
 </body>
-      </html>
+  </html>
