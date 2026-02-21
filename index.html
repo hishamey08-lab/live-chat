@@ -1,213 +1,303 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>Live Chat</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #ece5dd;
-}
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #000;
+      overflow: hidden;
+    }
 
-/* chat area */
-#chat {
-  height: 80vh;
-  overflow-y: auto;
-  padding: 10px;
-}
+    /* 🔐 Lock Screen */
+    #lockScreen {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: black;
+      color: white;
+    }
 
-/* input area */
-#inputArea {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: #fff;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+    .photos {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      width: 80%;
+      max-width: 400px;
+    }
 
-/* voice UI */
-#voiceUI {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+    .photos img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
 
-#slideText {
-  font-size: 12px;
-  color: #888;
-  display: none;
-}
+    /* 🔘 Unlock button */
+    #showPassBtn {
+      margin-top: 20px;
+      padding: 12px 28px;
+      border-radius: 25px;
+      border: none;
+      background: #25D366;
+      color: white;
+      font-size: 16px;
+    }
 
-#waveform {
-  display: none;
-  gap: 3px;
-}
+    /* 🔐 Password area */
+    #passwordArea {
+      display: none;
+      margin-top: 15px;
+      text-align: center;
+    }
 
-#waveform span {
-  width: 4px;
-  height: 8px;
-  background: #25D366;
-  animation: wave 1s infinite ease-in-out;
-}
+    #passwordInput {
+      padding: 12px;
+      width: 200px;
+      border-radius: 6px;
+      border: none;
+      text-align: center;
+      font-size: 16px;
+    }
 
-#waveform span:nth-child(2){animation-delay:.1s}
-#waveform span:nth-child(3){animation-delay:.2s}
-#waveform span:nth-child(4){animation-delay:.3s}
-#waveform span:nth-child(5){animation-delay:.4s}
+    #enterBtn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #075E54;
+      color: white;
+      font-size: 16px;
+    }
 
-@keyframes wave {
-  0%,100% {height:6px}
-  50% {height:18px}
-}
+    /* 💬 Chat Page */
+    #chatPage {
+      display: none;
+      height: 100vh;
+      background: #ece5dd;
+      flex-direction: column;
+    }
 
-#recordTimer {
-  font-size: 13px;
-  color: #25D366;
-  display: none;
-  min-width: 40px;
-}
+    #chatHeader {
+      background: #075E54;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
 
-#micBtn {
-  background: #075E54;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 50%;
-  font-size: 18px;
-}
-</style>
+    #chatBox {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .msg {
+      max-width: 70%;
+      padding: 8px 12px 18px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      font-size: 14px;
+      word-wrap: break-word;
+      position: relative;
+    }
+
+    .me {
+      background: #dcf8c6;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .friend {
+      background: #cfe9ff;
+      margin-right: auto;
+      text-align: left;
+    }
+
+    /* 💗 Pink ticks */
+    .tick {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 11px;
+      color: #f48fb1;
+    }
+
+    .seen {
+      color: #e91e63;
+    }
+
+    #inputArea {
+      display: flex;
+      padding: 10px;
+      background: #f0f0f0;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: none;
+      outline: none;
+    }
+
+    #sendBtn {
+      background: #25D366;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      margin-left: 8px;
+      border-radius: 50%;
+      font-size: 16px;
+    }
+  </style>
 </head>
 
 <body>
 
-<div id="chat"></div>
+<!-- 🔐 FIRST PAGE -->
+<div id="lockScreen">
+  <div class="photos">
+    <img src="photo1.png">
+    <img src="photo2.png">
+    <img src="photo3.png">
+    <img src="photo4.png">
+  </div>
 
-<div id="inputArea">
-  <div id="voiceUI">
-    <span id="slideText">◀ slide to cancel</span>
+  <button id="showPassBtn" onclick="showPasswordBox()">🔒 Unlock</button>
 
-    <div id="waveform">
-      <span></span><span></span><span></span><span></span><span></span>
-    </div>
-
-    <span id="recordTimer">00:00</span>
-
-    <button id="micBtn">🎤</button>
+  <div id="passwordArea">
+    <input id="passwordInput" type="password" placeholder="Enter Password">
+    <br>
+    <button id="enterBtn" onclick="checkPassword()">Enter</button>
   </div>
 </div>
 
-<!-- Firebase -->
+<!-- 💬 CHAT PAGE -->
+<div id="chatPage">
+  <div id="chatHeader">🔒 Secret Chat</div>
+  <div id="chatBox"></div>
+
+  <div id="inputArea">
+    <input id="messageInput" placeholder="Type a message...">
+    <button id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+  /* 🔐 PASSWORD */
+  const SECRET_PASSWORD = "9677";
 
-/* 🔥 REPLACE with your real Firebase config */
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_BUCKET",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-/* voice elements */
-const micBtn = document.getElementById("micBtn");
-const waveform = document.getElementById("waveform");
-const slideText = document.getElementById("slideText");
-const recordTimer = document.getElementById("recordTimer");
-
-let mediaRecorder;
-let audioChunks = [];
-let isRecording = false;
-let startX = 0;
-let cancelled = false;
-let timerInterval;
-let seconds = 0;
-
-/* HOLD TO RECORD + SLIDE CANCEL + TIMER */
-micBtn.addEventListener("touchstart", async (e) => {
-  startX = e.touches[0].clientX;
-  cancelled = false;
-
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.start();
-
-  isRecording = true;
-  waveform.style.display = "flex";
-  slideText.style.display = "block";
-  recordTimer.style.display = "block";
-
-  seconds = 0;
-  recordTimer.textContent = "00:00";
-
-  timerInterval = setInterval(() => {
-    seconds++;
-    const m = String(Math.floor(seconds / 60)).padStart(2,"0");
-    const s = String(seconds % 60).padStart(2,"0");
-    recordTimer.textContent = `${m}:${s}`;
-  }, 1000);
-});
-
-micBtn.addEventListener("touchmove", (e) => {
-  if (!isRecording) return;
-  const moveX = e.touches[0].clientX;
-  if (startX - moveX > 80) {
-    cancelled = true;
-    slideText.textContent = "❌ Cancelled";
+  /* 👤 user id */
+  let myId = localStorage.getItem("myId");
+  if (!myId) {
+    myId = Math.random().toString(36).substring(2);
+    localStorage.setItem("myId", myId);
   }
-});
 
-micBtn.addEventListener("touchend", async () => {
-  if (!isRecording) return;
+  window.showPasswordBox = () => {
+    passwordArea.style.display = "block";
+    showPassBtn.style.display = "none";
+    passwordInput.focus();
+  };
 
-  clearInterval(timerInterval);
-  waveform.style.display = "none";
-  slideText.style.display = "none";
-  recordTimer.style.display = "none";
-  slideText.textContent = "◀ slide to cancel";
-
-  isRecording = false;
-  mediaRecorder.stop();
-
-  mediaRecorder.onstop = async () => {
-    if (cancelled) {
-      audioChunks = [];
-      cancelled = false;
-      return;
+  window.checkPassword = () => {
+    if (passwordInput.value === SECRET_PASSWORD) {
+      lockScreen.style.display = "none";
+      chatPage.style.display = "flex";
+      document.body.style.overflow = "auto";
+      markMessagesSeen();
+    } else {
+      alert("Wrong password ❌");
     }
+  };
 
-    const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-    const audioRef = ref(storage, `voices/${Date.now()}.webm`);
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    query,
+    orderBy,
+    serverTimestamp,
+    deleteDoc,
+    doc,
+    updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    await uploadBytes(audioRef, audioBlob);
-    const audioURL = await getDownloadURL(audioRef);
+  const firebaseConfig = {
+    apiKey: "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",
+    authDomain: "live-chat-9016a.firebaseapp.com",
+    projectId: "live-chat-9016a",
+    storageBucket: "live-chat-9016a.appspot.com",
+    messagingSenderId: "687453441605",
+    appId: "1:687453441605:web:0f0a5b9b61afca40dd2c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const q = query(collection(db, "messages"), orderBy("time"));
+
+  function markMessagesSeen() {
+    onSnapshot(q, snapshot => {
+      snapshot.forEach(async d => {
+        const data = d.data();
+        if (data.sender !== myId && !data.seen) {
+          await updateDoc(doc(db, "messages", d.id), { seen: true });
+        }
+      });
+    });
+  }
+
+  onSnapshot(q, snapshot => {
+    chatBox.innerHTML = "";
+    snapshot.forEach(d => {
+      const data = d.data();
+      const isMe = data.sender === myId;
+
+      const div = document.createElement("div");
+      div.className = "msg " + (isMe ? "me" : "friend");
+      div.textContent = data.text;
+
+      if (isMe) {
+        const tick = document.createElement("span");
+        tick.className = "tick " + (data.seen ? "seen" : "");
+        tick.textContent = data.seen ? "✔✔" : "✔";
+        div.appendChild(tick);
+
+        div.ondblclick = async () => {
+          if (confirm("Delete this message?")) {
+            await deleteDoc(doc(db, "messages", d.id));
+          }
+        };
+      }
+
+      chatBox.appendChild(div);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+
+  window.sendMessage = async () => {
+    if (messageInput.value.trim() === "") return;
 
     await addDoc(collection(db, "messages"), {
-      audio: audioURL,
-      sender: "me",
+      text: messageInput.value,
+      sender: myId,
       time: serverTimestamp(),
-      seen: false,
-      deletedForEveryone: false
+      seen: false
     });
+
+    messageInput.value = "";
   };
-});
 </script>
 
 </body>
-  </html>
+      </html>
