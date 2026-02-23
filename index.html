@@ -92,6 +92,12 @@
       border-radius: 5px;
     }
 
+    #acceptBtn {
+      display: none;
+      background: orange;
+      color: white;
+    }
+
     #chatBox {
       flex: 1;
       padding: 10px;
@@ -178,6 +184,7 @@
   <div id="chatHeader">
     🔒 Secret Chat
     <button onclick="startCall()">📞 Call</button>
+    <button id="acceptBtn" onclick="acceptCall()">✅ Accept</button>
     <button onclick="endCall()">❌ End</button>
   </div>
 
@@ -189,7 +196,7 @@
   </div>
 </div>
 
-<audio id="remoteAudio" autoplay></audio>
+<audio id="remoteAudio"></audio>
 
 <script type="module">
   const SECRET_PASSWORD = "9677";
@@ -217,7 +224,7 @@
   import {
     getFirestore, collection, addDoc, onSnapshot, query,
     orderBy, serverTimestamp, deleteDoc, doc,
-    updateDoc, setDoc
+    updateDoc, setDoc, getDoc
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -232,8 +239,8 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  /* TEXT CHAT */
   const q = query(collection(db, "messages"), orderBy("time"));
-
   onSnapshot(q, snap => {
     chatBox.innerHTML = "";
     snap.forEach(d => {
@@ -247,15 +254,9 @@
         tick.className = "tick " + (data.seen ? "seen" : "");
         tick.textContent = data.seen ? "✔✔" : "✔";
         div.appendChild(tick);
-
-        div.ondblclick = async () => {
-          if (confirm("Delete message?"))
-            await deleteDoc(doc(db, "messages", d.id));
-        };
       } else if (!data.seen) {
         updateDoc(doc(db, "messages", d.id), { seen: true });
       }
-
       chatBox.appendChild(div);
     });
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -272,84 +273,74 @@
     messageInput.value = "";
   };
 
-  /* VOICE CHAT */
+  /* VOICE CHAT FIXED */
   let localStream;
   let peerConnection;
   const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+  const callDoc = doc(db, "calls", "globalCall");
 
   window.startCall = async () => {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     peerConnection = new RTCPeerConnection(servers);
 
     localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-    peerConnection.ontrack = e => remoteAudio.srcObject = e.streams[0];
-
-    const callDoc = doc(collection(db, "calls"));
-    const offerCandidates = collection(callDoc, "offerCandidates");
-    const answerCandidates = collection(callDoc, "answerCandidates");
+    peerConnection.ontrack = e => {
+      remoteAudio.srcObject = e.streams[0];
+      remoteAudio.play();
+    };
 
     peerConnection.onicecandidate = e => {
-      if (e.candidate) addDoc(offerCandidates, e.candidate.toJSON());
+      if (e.candidate)
+        addDoc(collection(callDoc, "offerCandidates"), e.candidate.toJSON());
     };
 
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     await setDoc(callDoc, { offer });
-
-    onSnapshot(callDoc, snap => {
-      const data = snap.data();
-      if (data?.answer && !peerConnection.currentRemoteDescription) {
-        peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-      }
-    });
-
-    onSnapshot(answerCandidates, snap => {
-      snap.docChanges().forEach(c => {
-        if (c.type === "added") {
-          peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data()));
-        }
-      });
-    });
-
-    alert("📞 Calling...");
   };
 
-  onSnapshot(collection(db, "calls"), snap => {
-    snap.docChanges().forEach(async change => {
-      if (change.type === "added") {
-        const callDoc = change.doc.ref;
-        const data = change.doc.data();
-
-        if (!data.answer && confirm("Incoming call 📞 Accept?")) {
-          localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          peerConnection = new RTCPeerConnection(servers);
-
-          localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-          peerConnection.ontrack = e => remoteAudio.srcObject = e.streams[0];
-
-          peerConnection.onicecandidate = e => {
-            if (e.candidate)
-              addDoc(collection(callDoc, "answerCandidates"), e.candidate.toJSON());
-          };
-
-          await peerConnection.setRemoteDescription(
-            new RTCSessionDescription(data.offer)
-          );
-
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          await updateDoc(callDoc, { answer });
-        }
-      }
-    });
+  onSnapshot(callDoc, snap => {
+    const data = snap.data();
+    if (data?.offer && !data.answer) {
+      acceptBtn.style.display = "inline-block";
+    }
+    if (data?.answer && peerConnection && !peerConnection.currentRemoteDescription) {
+      peerConnection.setRemoteDescription(
+        new RTCSessionDescription(data.answer)
+      );
+    }
   });
 
-  window.endCall = () => {
+  window.acceptCall = async () => {
+    acceptBtn.style.display = "none";
+
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    peerConnection = new RTCPeerConnection(servers);
+
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    peerConnection.ontrack = e => {
+      remoteAudio.srcObject = e.streams[0];
+      remoteAudio.play();
+    };
+
+    peerConnection.onicecandidate = e => {
+      if (e.candidate)
+        addDoc(collection(callDoc, "answerCandidates"), e.candidate.toJSON());
+    };
+
+    const offer = (await getDoc(callDoc)).data().offer;
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    await updateDoc(callDoc, { answer });
+  };
+
+  window.endCall = async () => {
     peerConnection?.close();
     localStream?.getTracks().forEach(t => t.stop());
-    alert("❌ Call ended");
+    await setDoc(callDoc, {});
   };
 </script>
 
 </body>
-      </html>
+</html>
