@@ -12,7 +12,7 @@
       overflow: hidden;
     }
 
-    /* 🔐 Lock Screen */
+    /* LOCK SCREEN */
     #lockScreen {
       height: 100vh;
       display: flex;
@@ -38,7 +38,6 @@
       border-radius: 10px;
     }
 
-    /* 🔘 Unlock button */
     #showPassBtn {
       margin-top: 20px;
       padding: 12px 28px;
@@ -49,11 +48,9 @@
       font-size: 16px;
     }
 
-    /* 🔐 Password area */
     #passwordArea {
       display: none;
       margin-top: 15px;
-      text-align: center;
     }
 
     #passwordInput {
@@ -62,20 +59,18 @@
       border-radius: 6px;
       border: none;
       text-align: center;
-      font-size: 16px;
     }
 
     #enterBtn {
       margin-top: 10px;
       padding: 10px 20px;
-      border: none;
       border-radius: 6px;
+      border: none;
       background: #075E54;
       color: white;
-      font-size: 16px;
     }
 
-    /* 💬 Chat Page */
+    /* CHAT */
     #chatPage {
       display: none;
       height: 100vh;
@@ -86,9 +81,15 @@
     #chatHeader {
       background: #075E54;
       color: white;
-      padding: 15px;
+      padding: 10px;
       text-align: center;
-      font-weight: bold;
+    }
+
+    #chatHeader button {
+      margin-left: 5px;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 5px;
     }
 
     #chatBox {
@@ -102,34 +103,30 @@
       padding: 8px 12px 18px;
       margin-bottom: 6px;
       border-radius: 8px;
-      font-size: 14px;
-      word-wrap: break-word;
       position: relative;
+      font-size: 14px;
     }
 
     .me {
       background: #dcf8c6;
       margin-left: auto;
-      text-align: right;
     }
 
     .friend {
       background: #cfe9ff;
       margin-right: auto;
-      text-align: left;
     }
 
-    /* 💗 Pink ticks */
     .tick {
       position: absolute;
       bottom: 4px;
       right: 6px;
       font-size: 11px;
-      color: #f48fb1;
+      color: pink;
     }
 
     .seen {
-      color: #e91e63;
+      color: deeppink;
     }
 
     #inputArea {
@@ -143,24 +140,22 @@
       padding: 10px;
       border-radius: 20px;
       border: none;
-      outline: none;
     }
 
     #sendBtn {
-      background: #25D366;
-      border: none;
-      color: white;
-      padding: 10px 15px;
       margin-left: 8px;
       border-radius: 50%;
-      font-size: 16px;
+      border: none;
+      padding: 10px 15px;
+      background: #25D366;
+      color: white;
     }
   </style>
 </head>
 
 <body>
 
-<!-- 🔐 FIRST PAGE -->
+<!-- LOCK SCREEN -->
 <div id="lockScreen">
   <div class="photos">
     <img src="photo1.png">
@@ -178,9 +173,14 @@
   </div>
 </div>
 
-<!-- 💬 CHAT PAGE -->
+<!-- CHAT PAGE -->
 <div id="chatPage">
-  <div id="chatHeader">🔒 Secret Chat</div>
+  <div id="chatHeader">
+    🔒 Secret Chat
+    <button onclick="startCall()">📞 Call</button>
+    <button onclick="endCall()">❌ End</button>
+  </div>
+
   <div id="chatBox"></div>
 
   <div id="inputArea">
@@ -189,11 +189,11 @@
   </div>
 </div>
 
+<audio id="remoteAudio" autoplay></audio>
+
 <script type="module">
-  /* 🔐 PASSWORD */
   const SECRET_PASSWORD = "9677";
 
-  /* 👤 user id */
   let myId = localStorage.getItem("myId");
   if (!myId) {
     myId = Math.random().toString(36).substring(2);
@@ -203,7 +203,6 @@
   window.showPasswordBox = () => {
     passwordArea.style.display = "block";
     showPassBtn.style.display = "none";
-    passwordInput.focus();
   };
 
   window.checkPassword = () => {
@@ -211,24 +210,14 @@
       lockScreen.style.display = "none";
       chatPage.style.display = "flex";
       document.body.style.overflow = "auto";
-      markMessagesSeen();
-    } else {
-      alert("Wrong password ❌");
-    }
+    } else alert("Wrong password ❌");
   };
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
-    getFirestore,
-    collection,
-    addDoc,
-    onSnapshot,
-    query,
-    orderBy,
-    serverTimestamp,
-    deleteDoc,
-    doc,
-    updateDoc
+    getFirestore, collection, addDoc, onSnapshot, query,
+    orderBy, serverTimestamp, deleteDoc, doc,
+    updateDoc, setDoc
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -245,57 +234,120 @@
 
   const q = query(collection(db, "messages"), orderBy("time"));
 
-  function markMessagesSeen() {
-    onSnapshot(q, snapshot => {
-      snapshot.forEach(async d => {
-        const data = d.data();
-        if (data.sender !== myId && !data.seen) {
-          await updateDoc(doc(db, "messages", d.id), { seen: true });
-        }
-      });
-    });
-  }
-
-  onSnapshot(q, snapshot => {
+  onSnapshot(q, snap => {
     chatBox.innerHTML = "";
-    snapshot.forEach(d => {
+    snap.forEach(d => {
       const data = d.data();
-      const isMe = data.sender === myId;
-
       const div = document.createElement("div");
-      div.className = "msg " + (isMe ? "me" : "friend");
+      div.className = "msg " + (data.sender === myId ? "me" : "friend");
       div.textContent = data.text;
 
-      if (isMe) {
+      if (data.sender === myId) {
         const tick = document.createElement("span");
         tick.className = "tick " + (data.seen ? "seen" : "");
         tick.textContent = data.seen ? "✔✔" : "✔";
         div.appendChild(tick);
 
         div.ondblclick = async () => {
-          if (confirm("Delete this message?")) {
+          if (confirm("Delete message?"))
             await deleteDoc(doc(db, "messages", d.id));
-          }
         };
+      } else if (!data.seen) {
+        updateDoc(doc(db, "messages", d.id), { seen: true });
       }
 
       chatBox.appendChild(div);
     });
-
     chatBox.scrollTop = chatBox.scrollHeight;
   });
 
   window.sendMessage = async () => {
-    if (messageInput.value.trim() === "") return;
-
+    if (!messageInput.value.trim()) return;
     await addDoc(collection(db, "messages"), {
       text: messageInput.value,
       sender: myId,
       time: serverTimestamp(),
       seen: false
     });
-
     messageInput.value = "";
+  };
+
+  /* VOICE CHAT */
+  let localStream;
+  let peerConnection;
+  const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+  window.startCall = async () => {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    peerConnection = new RTCPeerConnection(servers);
+
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    peerConnection.ontrack = e => remoteAudio.srcObject = e.streams[0];
+
+    const callDoc = doc(collection(db, "calls"));
+    const offerCandidates = collection(callDoc, "offerCandidates");
+    const answerCandidates = collection(callDoc, "answerCandidates");
+
+    peerConnection.onicecandidate = e => {
+      if (e.candidate) addDoc(offerCandidates, e.candidate.toJSON());
+    };
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    await setDoc(callDoc, { offer });
+
+    onSnapshot(callDoc, snap => {
+      const data = snap.data();
+      if (data?.answer && !peerConnection.currentRemoteDescription) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      }
+    });
+
+    onSnapshot(answerCandidates, snap => {
+      snap.docChanges().forEach(c => {
+        if (c.type === "added") {
+          peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data()));
+        }
+      });
+    });
+
+    alert("📞 Calling...");
+  };
+
+  onSnapshot(collection(db, "calls"), snap => {
+    snap.docChanges().forEach(async change => {
+      if (change.type === "added") {
+        const callDoc = change.doc.ref;
+        const data = change.doc.data();
+
+        if (!data.answer && confirm("Incoming call 📞 Accept?")) {
+          localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          peerConnection = new RTCPeerConnection(servers);
+
+          localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+          peerConnection.ontrack = e => remoteAudio.srcObject = e.streams[0];
+
+          peerConnection.onicecandidate = e => {
+            if (e.candidate)
+              addDoc(collection(callDoc, "answerCandidates"), e.candidate.toJSON());
+          };
+
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(data.offer)
+          );
+
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          await updateDoc(callDoc, { answer });
+        }
+      }
+    });
+  });
+
+  window.endCall = () => {
+    peerConnection?.close();
+    localStream?.getTracks().forEach(t => t.stop());
+    alert("❌ Call ended");
   };
 </script>
 
