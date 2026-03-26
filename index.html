@@ -45,7 +45,6 @@
       border: none;
       background: #25D366;
       color: white;
-      font-size: 16px;
     }
 
     #passwordArea {
@@ -85,19 +84,6 @@
       text-align: center;
     }
 
-    #chatHeader button {
-      margin-left: 5px;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
-    }
-
-    #acceptBtn {
-      display: none;
-      background: orange;
-      color: white;
-    }
-
     #chatBox {
       flex: 1;
       padding: 10px;
@@ -121,18 +107,6 @@
     .friend {
       background: #cfe9ff;
       margin-right: auto;
-    }
-
-    .tick {
-      position: absolute;
-      bottom: 4px;
-      right: 6px;
-      font-size: 11px;
-      color: pink;
-    }
-
-    .seen {
-      color: deeppink;
     }
 
     #inputArea {
@@ -181,50 +155,21 @@
 
 <!-- CHAT PAGE -->
 <div id="chatPage">
-  <div id="chatHeader">
-    🔒 Secret Chat
-    <button onclick="startCall()">📞 Call</button>
-    <button id="acceptBtn" onclick="acceptCall()">✅ Accept</button>
-    <button onclick="endCall()">❌ End</button>
-  </div>
+  <div id="chatHeader">🔒 Secret Chat</div>
 
   <div id="chatBox"></div>
 
   <div id="inputArea">
     <input id="messageInput" placeholder="Type a message...">
-    <button id="sendBtn" onclick="sendMessage()">➤</button>
+    <button id="sendBtn">➤</button>
   </div>
 </div>
 
-<audio id="remoteAudio"></audio>
-
 <script type="module">
-  const SECRET_PASSWORD = "9677";
-
-  let myId = localStorage.getItem("myId");
-  if (!myId) {
-    myId = Math.random().toString(36).substring(2);
-    localStorage.setItem("myId", myId);
-  }
-
-  window.showPasswordBox = () => {
-    passwordArea.style.display = "block";
-    showPassBtn.style.display = "none";
-  };
-
-  window.checkPassword = () => {
-    if (passwordInput.value === SECRET_PASSWORD) {
-      lockScreen.style.display = "none";
-      chatPage.style.display = "flex";
-      document.body.style.overflow = "auto";
-    } else alert("Wrong password ❌");
-  };
-
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, onSnapshot, query,
-    orderBy, serverTimestamp, deleteDoc, doc,
-    updateDoc, setDoc, getDoc
+    getFirestore, collection, addDoc, onSnapshot,
+    query, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -239,107 +184,78 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  /* TEXT CHAT */
+  const messageInput = document.getElementById("messageInput");
+  const chatBox = document.getElementById("chatBox");
+  const sendBtn = document.getElementById("sendBtn");
+
+  let myId = localStorage.getItem("myId");
+  if (!myId) {
+    myId = Math.random().toString(36).substring(2);
+    localStorage.setItem("myId", myId);
+  }
+
+  /* PASSWORD */
+  window.showPasswordBox = () => {
+    document.getElementById("passwordArea").style.display = "block";
+    document.getElementById("showPassBtn").style.display = "none";
+  };
+
+  window.checkPassword = () => {
+    if (document.getElementById("passwordInput").value === "9677") {
+      document.getElementById("lockScreen").style.display = "none";
+      document.getElementById("chatPage").style.display = "flex";
+      document.body.style.overflow = "auto";
+    } else {
+      alert("Wrong password ❌");
+    }
+  };
+
+  /* RECEIVE */
   const q = query(collection(db, "messages"), orderBy("time"));
   onSnapshot(q, snap => {
     chatBox.innerHTML = "";
     snap.forEach(d => {
       const data = d.data();
       const div = document.createElement("div");
+
       div.className = "msg " + (data.sender === myId ? "me" : "friend");
       div.textContent = data.text;
 
-      if (data.sender === myId) {
-        const tick = document.createElement("span");
-        tick.className = "tick " + (data.seen ? "seen" : "");
-        tick.textContent = data.seen ? "✔✔" : "✔";
-        div.appendChild(tick);
-      } else if (!data.seen) {
-        updateDoc(doc(db, "messages", d.id), { seen: true });
-      }
       chatBox.appendChild(div);
     });
+
     chatBox.scrollTop = chatBox.scrollHeight;
   });
 
-  window.sendMessage = async () => {
-    if (!messageInput.value.trim()) return;
-    await addDoc(collection(db, "messages"), {
-      text: messageInput.value,
-      sender: myId,
-      time: serverTimestamp(),
-      seen: false
-    });
-    messageInput.value = "";
-  };
+  /* SEND (FIXED) */
+  async function sendMessage() {
+    try {
+      const text = messageInput.value.trim();
+      if (!text) return;
 
-  /* VOICE CHAT FIXED */
-  let localStream;
-  let peerConnection;
-  const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-  const callDoc = doc(db, "calls", "globalCall");
+      console.log("Sending:", text);
 
-  window.startCall = async () => {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    peerConnection = new RTCPeerConnection(servers);
+      await addDoc(collection(db, "messages"), {
+        text: text,
+        sender: myId,
+        time: serverTimestamp()
+      });
 
-    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-    peerConnection.ontrack = e => {
-      remoteAudio.srcObject = e.streams[0];
-      remoteAudio.play();
-    };
+      messageInput.value = "";
+      console.log("Sent ✅");
 
-    peerConnection.onicecandidate = e => {
-      if (e.candidate)
-        addDoc(collection(callDoc, "offerCandidates"), e.candidate.toJSON());
-    };
-
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    await setDoc(callDoc, { offer });
-  };
-
-  onSnapshot(callDoc, snap => {
-    const data = snap.data();
-    if (data?.offer && !data.answer) {
-      acceptBtn.style.display = "inline-block";
+    } catch (err) {
+      console.error(err);
+      alert("Error: " + err.message);
     }
-    if (data?.answer && peerConnection && !peerConnection.currentRemoteDescription) {
-      peerConnection.setRemoteDescription(
-        new RTCSessionDescription(data.answer)
-      );
-    }
+  }
+
+  sendBtn.addEventListener("click", sendMessage);
+
+  messageInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
   });
 
-  window.acceptCall = async () => {
-    acceptBtn.style.display = "none";
-
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    peerConnection = new RTCPeerConnection(servers);
-
-    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-    peerConnection.ontrack = e => {
-      remoteAudio.srcObject = e.streams[0];
-      remoteAudio.play();
-    };
-
-    peerConnection.onicecandidate = e => {
-      if (e.candidate)
-        addDoc(collection(callDoc, "answerCandidates"), e.candidate.toJSON());
-    };
-
-    const offer = (await getDoc(callDoc)).data().offer;
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    await updateDoc(callDoc, { answer });
-  };
-
-  window.endCall = async () => {
-    peerConnection?.close();
-    localStream?.getTracks().forEach(t => t.stop());
-    await setDoc(callDoc, {});
-  };
 </script>
 
 </body>
