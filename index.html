@@ -1,262 +1,753 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Secret Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Our Secret Chat 💌</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #000;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rose:    #e8607a;
+      --blush:   #f9dde3;
+      --deep:    #1a0a0f;
+      --card:    #2a1018;
+      --gold:    #c9a96e;
+      --me-bg:   #3d1a25;
+      --me-text: #f7dde5;
+      --them-bg: #1e2a3a;
+      --them-text:#d6e8f7;
+      --surface: #120608;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--deep);
       overflow: hidden;
     }
 
-    /* LOCK SCREEN */
+    /* ── LOCK SCREEN ── */
     #lockScreen {
-      height: 100vh;
+      position: fixed; inset: 0;
+      background: var(--deep);
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
-      background: black;
-      color: white;
+      justify-content: center;
+      gap: 28px;
+      z-index: 100;
+      padding: 20px;
     }
 
-    .photos {
+    /* Soft radial glow behind content */
+    #lockScreen::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(232,96,122,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .lock-title {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: clamp(22px, 6vw, 34px);
+      color: var(--rose);
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .photos-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
-      width: 80%;
-      max-width: 400px;
+      width: min(340px, 88vw);
     }
 
-    .photos img {
+    .photos-grid img {
       width: 100%;
-      height: 150px;
+      aspect-ratio: 1;
       object-fit: cover;
-      border-radius: 10px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(232,96,122,0.25);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    #showPassBtn {
-      margin-top: 20px;
-      padding: 12px 28px;
-      border-radius: 25px;
-      border: none;
-      background: #25D366;
+    .photos-grid img:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 30px rgba(232,96,122,0.3);
+    }
+
+    /* large center photo in the grid */
+    .photos-grid .big {
+      grid-column: 1 / -1;
+      aspect-ratio: 16/7;
+    }
+
+    .unlock-btn {
+      padding: 13px 38px;
+      border-radius: 50px;
+      border: 1.5px solid var(--rose);
+      background: transparent;
+      color: var(--rose);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .unlock-btn:hover, .unlock-btn:active {
+      background: var(--rose);
       color: white;
     }
 
     #passwordArea {
       display: none;
-      margin-top: 15px;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      animation: fadeUp 0.3s ease;
     }
 
     #passwordInput {
-      padding: 12px;
-      width: 200px;
-      border-radius: 6px;
-      border: none;
+      padding: 13px 20px;
+      width: 220px;
+      border-radius: 50px;
+      border: 1.5px solid rgba(232,96,122,0.4);
+      background: var(--card);
+      color: white;
       text-align: center;
+      font-size: 18px;
+      letter-spacing: 5px;
+      outline: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.2s;
     }
+
+    #passwordInput:focus { border-color: var(--rose); }
 
     #enterBtn {
-      margin-top: 10px;
-      padding: 10px 20px;
-      border-radius: 6px;
+      padding: 12px 36px;
+      border-radius: 50px;
       border: none;
-      background: #075E54;
+      background: var(--rose);
       color: white;
+      font-size: 15px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
     }
+    #enterBtn:active { transform: scale(0.96); opacity: 0.9; }
 
-    /* CHAT */
-    #chatPage {
-      display: none;
-      height: 100vh;
-      background: #ece5dd;
-      flex-direction: column;
-    }
-
-    #chatHeader {
-      background: #075E54;
-      color: white;
-      padding: 10px;
+    .error-msg {
+      color: #ff6b8a;
+      font-size: 13px;
+      min-height: 18px;
       text-align: center;
     }
 
+    /* ── CHAT PAGE ── */
+    #chatPage {
+      display: none;
+      position: fixed; inset: 0;
+      flex-direction: column;
+      background: var(--surface);
+    }
+
+    /* Header */
+    #chatHeader {
+      background: var(--card);
+      border-bottom: 1px solid rgba(232,96,122,0.15);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .header-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--rose);
+      object-fit: cover;
+      background: var(--me-bg);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--rose); font-size: 18px;
+      overflow: hidden;
+    }
+
+    .header-info { flex: 1; }
+
+    .header-name {
+      font-family: 'Playfair Display', serif;
+      color: white;
+      font-size: 17px;
+    }
+
+    .header-status {
+      font-size: 12px;
+      color: #4ec26b;
+    }
+
+    .header-icons { display: flex; gap: 10px; }
+
+    .header-icon-btn {
+      background: none; border: none;
+      color: rgba(255,255,255,0.5);
+      font-size: 18px; cursor: pointer;
+      padding: 6px;
+      border-radius: 50%;
+      transition: color 0.2s, background 0.2s;
+    }
+    .header-icon-btn:hover { color: var(--rose); background: rgba(232,96,122,0.1); }
+
+    /* Messages */
     #chatBox {
       flex: 1;
-      padding: 10px;
       overflow-y: auto;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scroll-behavior: smooth;
     }
+
+    /* Subtle pattern background */
+    #chatBox {
+      background-image: radial-gradient(circle at 1px 1px, rgba(232,96,122,0.04) 1px, transparent 0);
+      background-size: 28px 28px;
+    }
+
+    /* Date divider */
+    .date-divider {
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 11px;
+      margin: 10px 0 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .msg-wrapper {
+      display: flex;
+      flex-direction: column;
+      max-width: 78%;
+      animation: msgIn 0.25s ease;
+    }
+
+    .msg-wrapper.me  { align-self: flex-end; align-items: flex-end; }
+    .msg-wrapper.friend { align-self: flex-start; align-items: flex-start; }
+
+    .sender-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+      opacity: 0.6;
+    }
+    .me .sender-label { color: var(--rose); }
+    .friend .sender-label { color: #7aaccc; }
 
     .msg {
-      max-width: 70%;
-      padding: 8px 12px 18px;
-      margin-bottom: 6px;
-      border-radius: 8px;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14.5px;
+      line-height: 1.5;
+      word-break: break-word;
       position: relative;
-      font-size: 14px;
     }
 
-    .me {
-      background: #dcf8c6;
-      margin-left: auto;
+    .me .msg {
+      background: var(--me-bg);
+      color: var(--me-text);
+      border-bottom-right-radius: 4px;
     }
 
-    .friend {
-      background: #cfe9ff;
-      margin-right: auto;
+    .friend .msg {
+      background: var(--them-bg);
+      color: var(--them-text);
+      border-bottom-left-radius: 4px;
     }
 
+    .msg-time {
+      font-size: 10px;
+      opacity: 0.45;
+      margin-top: 3px;
+      padding: 0 2px;
+    }
+
+    /* Typing indicator */
+    #typingIndicator {
+      display: none;
+      align-self: flex-start;
+      padding: 10px 16px;
+      background: var(--them-bg);
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      gap: 5px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    #typingIndicator span {
+      width: 6px; height: 6px;
+      background: #7aaccc;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+
+    #typingIndicator span:nth-child(2) { animation-delay: 0.2s; }
+    #typingIndicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* Input area */
     #inputArea {
+      background: var(--card);
+      border-top: 1px solid rgba(232,96,122,0.1);
+      padding: 10px 12px;
       display: flex;
-      padding: 10px;
-      background: #f0f0f0;
+      align-items: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+      /* Fix for mobile keyboard push */
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 
     #messageInput {
       flex: 1;
-      padding: 10px;
-      border-radius: 20px;
-      border: none;
+      padding: 11px 16px;
+      border-radius: 22px;
+      border: 1.5px solid rgba(232,96,122,0.2);
+      background: var(--deep);
+      color: white;
+      font-size: 15px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.4;
+      transition: border-color 0.2s;
     }
+
+    #messageInput:focus { border-color: rgba(232,96,122,0.5); }
+    #messageInput::placeholder { color: rgba(255,255,255,0.25); }
 
     #sendBtn {
-      margin-left: 8px;
+      width: 44px; height: 44px;
+      flex-shrink: 0;
       border-radius: 50%;
       border: none;
-      padding: 10px 15px;
-      background: #25D366;
+      background: var(--rose);
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, opacity 0.2s;
+      box-shadow: 0 4px 14px rgba(232,96,122,0.4);
+    }
+    #sendBtn:active { transform: scale(0.9); }
+    #sendBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Emoji quick bar */
+    .emoji-bar {
+      display: flex; gap: 8px;
+      padding: 6px 14px 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex-shrink: 0;
+    }
+    .emoji-bar::-webkit-scrollbar { display: none; }
+
+    .emoji-pill {
+      background: var(--card);
+      border: 1px solid rgba(232,96,122,0.15);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .emoji-pill:active { transform: scale(1.25); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40%            { transform: translateY(-6px); }
+    }
+
+    /* Scrollbar */
+    #chatBox::-webkit-scrollbar { width: 4px; }
+    #chatBox::-webkit-scrollbar-track { background: transparent; }
+    #chatBox::-webkit-scrollbar-thumb { background: rgba(232,96,122,0.25); border-radius: 4px; }
+
+    /* Name chooser overlay */
+    #nameOverlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+      backdrop-filter: blur(6px);
+    }
+
+    .name-card {
+      background: var(--card);
+      border: 1px solid rgba(232,96,122,0.3);
+      border-radius: 20px;
+      padding: 32px 28px;
+      text-align: center;
+      max-width: 300px;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .name-card h2 {
+      font-family: 'Playfair Display', serif;
+      color: var(--rose);
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .name-card p {
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .name-btns { display: flex; gap: 12px; justify-content: center; }
+
+    .name-btn {
+      padding: 12px 28px;
+      border-radius: 50px;
+      border: 1.5px solid var(--rose);
+      background: transparent;
+      color: var(--rose);
+      font-size: 15px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .name-btn:hover, .name-btn:active {
+      background: var(--rose);
       color: white;
     }
+
+    /* Empty state */
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .empty-state div:first-child { font-size: 40px; margin-bottom: 8px; }
+    .empty-state div:last-child  { font-size: 13px; color: white; }
   </style>
 </head>
-
 <body>
+
+<!-- NAME CHOOSER -->
+<div id="nameOverlay" style="display:none;">
+  <div class="name-card">
+    <h2>Who are you? 💌</h2>
+    <p>This helps label your messages correctly</p>
+    <div class="name-btns">
+      <button class="name-btn" onclick="setName('Raahii')">Raahii</button>
+      <button class="name-btn" onclick="setName('Rasla')">Rasla</button>
+    </div>
+  </div>
+</div>
 
 <!-- LOCK SCREEN -->
 <div id="lockScreen">
-  <div class="photos">
-    <img src="photo1.png">
-    <img src="photo2.png">
-    <img src="photo3.png">
-    <img src="photo4.png">
+  <p class="lock-title">Our Little Secret 🌹</p>
+
+  <div class="photos-grid">
+    <img src="RAAHII1.png" alt="" onerror="this.style.background='#2a1018';this.style.display='flex';this.alt='🌸'">
+    <img src="RAAHII2.png" alt="" onerror="this.style.background='#1a2030';this.style.display='flex'">
+    <img src="RAAHII3.png" alt="" onerror="this.style.background='#201020';this.style.display='flex'">
+    <img src="RAAHII4.png" alt="" onerror="this.style.background='#102020';this.style.display='flex'">
   </div>
 
-  <button id="showPassBtn" onclick="showPasswordBox()">🔒 Unlock</button>
+  <button class="unlock-btn" id="showPassBtn" onclick="showPasswordBox()">🔒 Unlock</button>
 
   <div id="passwordArea">
-    <input id="passwordInput" type="password" placeholder="Enter Password">
-    <br>
-    <button id="enterBtn" onclick="checkPassword()">Enter</button>
+    <input id="passwordInput" type="password" placeholder="••••••" maxlength="20"
+           onkeydown="if(event.key==='Enter') checkPassword()">
+    <button id="enterBtn" onclick="checkPassword()">Open ✦</button>
+    <div class="error-msg" id="errorMsg"></div>
   </div>
 </div>
 
 <!-- CHAT PAGE -->
 <div id="chatPage">
-  <div id="chatHeader">🔒 Secret Chat</div>
 
-  <div id="chatBox"></div>
+  <!-- Header -->
+  <div id="chatHeader">
+    <div class="header-avatar">💌</div>
+    <div class="header-info">
+      <div class="header-name">Our Chat</div>
+      <div class="header-status" id="onlineStatus">● Online</div>
+    </div>
+    <div class="header-icons">
+      <button class="header-icon-btn" title="Clear (hold)" id="clearBtn">🗑</button>
+      <button class="header-icon-btn" title="Switch user" onclick="switchUser()">👤</button>
+    </div>
+  </div>
 
+  <!-- Messages -->
+  <div id="chatBox">
+    <div class="empty-state" id="emptyState">
+      <div>💌</div>
+      <div>No messages yet. Say something sweet…</div>
+    </div>
+  </div>
+
+  <!-- Typing indicator -->
+  <div id="typingIndicator" style="display:flex; margin: 0 14px 4px;">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- Emoji quick bar -->
+  <div class="emoji-bar" id="emojiBar">
+    <div class="emoji-pill" onclick="insertEmoji('❤️')">❤️</div>
+    <div class="emoji-pill" onclick="insertEmoji('🥰')">🥰</div>
+    <div class="emoji-pill" onclick="insertEmoji('😘')">😘</div>
+    <div class="emoji-pill" onclick="insertEmoji('💕')">💕</div>
+    <div class="emoji-pill" onclick="insertEmoji('✨')">✨</div>
+    <div class="emoji-pill" onclick="insertEmoji('🌹')">🌹</div>
+    <div class="emoji-pill" onclick="insertEmoji('😊')">😊</div>
+    <div class="emoji-pill" onclick="insertEmoji('🫶')">🫶</div>
+    <div class="emoji-pill" onclick="insertEmoji('💋')">💋</div>
+  </div>
+
+  <!-- Input -->
   <div id="inputArea">
-    <input id="messageInput" placeholder="Type a message...">
+    <textarea id="messageInput" placeholder="Type something…" rows="1"></textarea>
     <button id="sendBtn">➤</button>
   </div>
+
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, onSnapshot,
-    query, orderBy, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    getDatabase, ref, push, onValue, query,
+    orderByChild, limitToLast, serverTimestamp, remove, get
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+  /* ── Firebase Config ── */
+  // ⚠️  Replace with your actual Realtime Database config below.
+  //     The original apiKey in the code was truncated — fill it in here.
   const firebaseConfig = {
-    apiKey: "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",
-    authDomain: "live-chat-9016a.firebaseapp.com",
-    projectId: "live-chat-9016a",
-    storageBucket: "live-chat-9016a.appspot.com",
+    apiKey:            "AIzaSyGff0FxzbkRBNFvQwNvJpERnRdLVg-",   // ← FIX: add missing chars
+    authDomain:        "live-chat-9016a.firebaseapp.com",
+    databaseURL:       "https://live-chat-9016a-default-rtdb.firebaseio.com", // ← add your RTDB URL
+    projectId:         "live-chat-9016a",
+    storageBucket:     "live-chat-9016a.appspot.com",
     messagingSenderId: "687453441605",
-    appId: "1:687453441605:web:0f0a5b9b61afca40dd2c"
+    appId:             "1:687453441605:web:0f0a5b9b61afca40dd2c"
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const db  = getDatabase(app);
+  const msgsRef = ref(db, "messages");
 
-  const messageInput = document.getElementById("messageInput");
-  const chatBox = document.getElementById("chatBox");
-  const sendBtn = document.getElementById("sendBtn");
+  /* ── Identity ── */
+  let myName = localStorage.getItem("chatName");
 
-  let myId = localStorage.getItem("myId");
-  if (!myId) {
-    myId = Math.random().toString(36).substring(2);
-    localStorage.setItem("myId", myId);
-  }
+  /* ── Password ── */
+  const PASSWORD = "RAAHII"; // change if you want
 
-  /* PASSWORD */
   window.showPasswordBox = () => {
-    document.getElementById("passwordArea").style.display = "block";
-    document.getElementById("showPassBtn").style.display = "none";
+    document.getElementById("passwordArea").style.display = "flex";
+    document.getElementById("showPassBtn").style.display  = "none";
+    setTimeout(() => document.getElementById("passwordInput").focus(), 100);
   };
 
   window.checkPassword = () => {
-    if (document.getElementById("passwordInput").value === "9677") {
+    const val = document.getElementById("passwordInput").value;
+    const err = document.getElementById("errorMsg");
+    if (val === PASSWORD) {
       document.getElementById("lockScreen").style.display = "none";
-      document.getElementById("chatPage").style.display = "flex";
-      document.body.style.overflow = "auto";
+      if (!myName) {
+        document.getElementById("nameOverlay").style.display = "flex";
+      } else {
+        openChat();
+      }
     } else {
-      alert("Wrong password ❌");
+      err.textContent = "Wrong password ❌";
+      document.getElementById("passwordInput").value = "";
+      setTimeout(() => { err.textContent = ""; }, 2000);
     }
   };
 
-  /* RECEIVE */
-  const q = query(collection(db, "messages"), orderBy("time"));
-  onSnapshot(q, snap => {
-    chatBox.innerHTML = "";
-    snap.forEach(d => {
-      const data = d.data();
-      const div = document.createElement("div");
+  window.setName = (name) => {
+    myName = name;
+    localStorage.setItem("chatName", name);
+    document.getElementById("nameOverlay").style.display = "none";
+    openChat();
+  };
 
-      div.className = "msg " + (data.sender === myId ? "me" : "friend");
-      div.textContent = data.text;
+  window.switchUser = () => {
+    localStorage.removeItem("chatName");
+    myName = null;
+    document.getElementById("nameOverlay").style.display = "flex";
+  };
 
-      chatBox.appendChild(div);
-    });
+  function openChat() {
+    document.getElementById("chatPage").style.display = "flex";
+  }
 
-    chatBox.scrollTop = chatBox.scrollHeight;
-  });
+  /* ── Emoji insert ── */
+  window.insertEmoji = (e) => {
+    const inp = document.getElementById("messageInput");
+    inp.value += e;
+    inp.focus();
+    autoResize(inp);
+  };
 
-  /* SEND (FIXED) */
+  /* ── Auto-resize textarea ── */
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  const messageInput = document.getElementById("messageInput");
+  const chatBox      = document.getElementById("chatBox");
+  const sendBtn      = document.getElementById("sendBtn");
+
+  messageInput.addEventListener("input", () => autoResize(messageInput));
+
+  /* ── Send ── */
   async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text || !myName) return;
+
+    sendBtn.disabled = true;
     try {
-      const text = messageInput.value.trim();
-      if (!text) return;
-
-      console.log("Sending:", text);
-
-      await addDoc(collection(db, "messages"), {
-        text: text,
-        sender: myId,
+      await push(msgsRef, {
+        text,
+        sender: myName,
         time: serverTimestamp()
       });
-
       messageInput.value = "";
-      console.log("Sent ✅");
-
+      messageInput.style.height = "auto";
     } catch (err) {
-      console.error(err);
-      alert("Error: " + err.message);
+      alert("Couldn't send 😢 " + err.message);
+    } finally {
+      sendBtn.disabled = false;
+      messageInput.focus();
     }
   }
 
   sendBtn.addEventListener("click", sendMessage);
 
-  messageInput.addEventListener("keypress", e => {
-    if (e.key === "Enter") sendMessage();
+  messageInput.addEventListener("keydown", e => {
+    // Desktop: Enter sends. Mobile (soft keyboard): Enter = newline to avoid accidental sends
+    if (e.key === "Enter" && !e.shiftKey && !isMobile()) {
+      e.preventDefault();
+      sendMessage();
+    }
   });
 
-</script>
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
 
+  /* ── Receive ── */
+  let lastDate = null;
+
+  const q = query(msgsRef, orderByChild("time"), limitToLast(200));
+
+  onValue(q, snap => {
+    chatBox.innerHTML = "";
+    lastDate = null;
+
+    if (!snap.exists()) {
+      chatBox.appendChild(Object.assign(document.createElement("div"), {
+        className: "empty-state",
+        innerHTML: "<div>💌</div><div>No messages yet. Say something sweet…</div>"
+      }));
+      return;
+    }
+
+    snap.forEach(child => {
+      const data = child.val();
+      const isMe = data.sender === myName;
+
+      // Date divider
+      if (data.time) {
+        const d = new Date(data.time);
+        const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+        if (dateStr !== lastDate) {
+          lastDate = dateStr;
+          const div = document.createElement("div");
+          div.className = "date-divider";
+          div.textContent = dateStr;
+          chatBox.appendChild(div);
+        }
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "msg-wrapper " + (isMe ? "me" : "friend");
+
+      const label = document.createElement("div");
+      label.className = "sender-label";
+      label.textContent = data.sender || "?";
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg";
+      bubble.textContent = data.text;
+
+      const timeEl = document.createElement("div");
+      timeEl.className = "msg-time";
+      if (data.time) {
+        const d = new Date(data.time);
+        timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(bubble);
+      wrapper.appendChild(timeEl);
+      chatBox.appendChild(wrapper);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+
+  /* ── Clear (double-click) ── */
+  let clearTimer;
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    clearTimer = setTimeout(() => {
+      if (confirm("Clear all messages? This can't be undone.")) {
+        remove(msgsRef);
+      }
+    }, 600);
+  });
+
+  /* ── Keyboard safe-area fix for mobile ── */
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      document.getElementById("chatPage").style.height = window.visualViewport.height + "px";
+    });
+  }
+</script>
 </body>
 </html>
